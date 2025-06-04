@@ -18,30 +18,24 @@ export function PredictionPanel({
 }: PredictionPanelProps) {
   const getRecommendationColor = (recommendation: string) => {
     switch (recommendation) {
-      case 'BUY': return 'text-green-600 bg-green-50 border-green-200';
-      case 'SELL': return 'text-red-600 bg-red-50 border-red-200';
-      default: return 'text-gray-600 bg-gray-50 border-gray-200';
+      case 'BUY': return 'bg-green-800 text-white border-green-700';
+      case 'SELL': return 'bg-red-800 text-white border-red-700';
+      default: return 'bg-gray-800 text-white border-gray-700';
     }
   };
 
   const getConfidenceColor = (confidence: string) => {
-    switch (confidence) {
-      case 'high': return 'text-green-600';
-      case 'medium': return 'text-yellow-600';
-      default: return 'text-red-600';
-    }
+    return 'text-black';
   };
 
   const getProbabilityColor = (probability: number) => {
-    if (probability >= 0.7) return 'text-green-600';
-    if (probability >= 0.5) return 'text-yellow-600';
-    return 'text-red-600';
+    return 'text-black';
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-lg p-6 border">
+    <div className="bg-black rounded-lg shadow-lg p-6 border border-gray-800 text-white">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold text-gray-900">AI Profit Prediction</h3>
+        <h3 className="text-lg font-semibold">AI Profit Prediction</h3>
         <button
           onClick={onRefresh}
           disabled={loading}
@@ -52,7 +46,7 @@ export function PredictionPanel({
       </div>
 
       {error && (
-        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
+        <div className="mb-4 p-3 bg-red-800 border border-red-700 text-white rounded-md">
           <p className="text-red-700 text-sm">{error}</p>
         </div>
       )}
@@ -77,16 +71,16 @@ export function PredictionPanel({
 
           {/* Probability and Metrics */}
           <div className="grid grid-cols-2 gap-4">
-            <div className="bg-gray-50 p-3 rounded-lg">
-              <span className="text-sm text-gray-600">Profit Probability</span>
+            <div className="bg-gray-800 p-3 rounded-lg text-white">
+              <span className="text-sm text-gray-400">Profit Probability</span>
               <div className={`text-xl font-bold ${getProbabilityColor(prediction.probability)}`}>
                 {(prediction.probability * 100).toFixed(1)}%
               </div>
             </div>
             
             {prediction.current_price && (
-              <div className="bg-gray-50 p-3 rounded-lg">
-                <span className="text-sm text-gray-600">Current Price</span>
+              <div className="bg-gray-800 p-3 rounded-lg text-white">
+                <span className="text-sm text-gray-400">Current Price</span>
                 <div className="text-xl font-bold">
                   ${prediction.current_price.toFixed(4)}
                 </div>

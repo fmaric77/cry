@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import InteractiveChart from "./InteractiveChart";
 import { PredictionPanel, TradingPanel, PortfolioOverview, AutoTradingPanel } from "./components";
-import { useBinanceData, useModelPrediction } from "./hooks";
+import { useBinanceData, useModelPrediction, useUserPreferences, useIndicators } from "./hooks";
 import { getBinanceSymbol } from "./utils";
 
 interface CoinData {
@@ -54,7 +54,7 @@ function TradingWrapper({ coinId }: { coinId: string }) {
 
   if (!currentPrice) {
     return (
-      <div className="bg-white rounded-lg shadow-lg p-6 border">
+      <div className="bg-black rounded-lg shadow-lg p-6 border text-white">
         <div className="text-center text-gray-500">Loading price data...</div>
       </div>
     );
@@ -77,6 +77,24 @@ function AutoTradingWrapper({ coinId }: { coinId: string }) {
     refreshRate: 30000
   });
 
+  const { indicators } = useIndicators({
+    prices: prices || [],
+    candles: binanceCandles || [],
+    settings: {
+      sma: { enabled: false, period: 20, color: '#f39c12' },
+      ema: { enabled: false, period: 20, color: '#4ecdc4' },
+      rsi: { enabled: false, period: 14, color: '#45b7d1' },
+      macd: { enabled: false, fastPeriod: 12, slowPeriod: 26, signalPeriod: 9, colors: { macd: '#45b7d1', signal: '#ff6b6b', histogram: '#95a5a6' } },
+      bb: {
+        enabled: true,     // <--- turned on for strategy evaluation
+        period: 20,
+        stdDev: 2,
+        colors: { upper: '#e74c3c', middle: '#f39c12', lower: '#27ae60' }
+      },
+      stoch: { enabled: false, kPeriod: 14, dPeriod: 3, colors: { k: '#9b59b6', d: '#e67e22' } }
+    }
+  });
+
   const {
     prediction
   } = useModelPrediction({
@@ -90,7 +108,7 @@ function AutoTradingWrapper({ coinId }: { coinId: string }) {
 
   if (!currentPrice) {
     return (
-      <div className="bg-white rounded-lg shadow-lg p-6 border">
+      <div className="bg-black rounded-lg shadow-lg p-6 border text-white">
         <div className="text-center text-gray-500">Loading price data...</div>
       </div>
     );
@@ -102,6 +120,8 @@ function AutoTradingWrapper({ coinId }: { coinId: string }) {
       currentPrice={currentPrice}
       prediction={prediction}
       coinName={coinId}
+      indicators={indicators}
+      binanceCandles={binanceCandles}
     />
   );
 }
@@ -111,6 +131,8 @@ export default function CryptoDiagramPage({ params }: { params: Promise<{ id: st
   const [coinData, setCoinData] = useState<CoinData | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'predictions' | 'trading' | 'portfolio' | 'autotrading'>('predictions');
+
+  const preferences = useUserPreferences();
 
   useEffect(() => {
     const loadData = async () => {
@@ -164,7 +186,7 @@ export default function CryptoDiagramPage({ params }: { params: Promise<{ id: st
             </a>
             
             {/* Tab Navigation */}
-            <div className="bg-white rounded-lg shadow-lg border p-1 mb-4">
+            <div className="bg-black rounded-lg shadow-lg border p-1 mb-4">
               <div className="grid grid-cols-4 gap-1">
                 <button
                   onClick={() => setActiveTab('predictions')}

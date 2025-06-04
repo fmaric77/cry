@@ -19,7 +19,7 @@ function SearchForm() {
         type="text"
         name="q"
         placeholder="Search for a cryptocurrency..."
-        className="flex-1 px-3 py-2 rounded border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-black dark:text-white"
+        className="flex-1 px-3 py-2 rounded border border-gray-700 bg-gray-900 text-white"
         autoComplete="off"
       />
       <button type="submit" className="px-4 py-2 rounded bg-blue-600 text-white font-semibold hover:bg-blue-700">Search</button>
@@ -46,7 +46,7 @@ async function CryptoList({ query }: { query: string }) {
   return (
     <ul className="w-full space-y-4">
       {coins.map((coin: any) => (
-        <li key={coin.id} className="flex items-center gap-4 p-4 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-sm">
+        <li key={coin.id} className="flex items-center gap-4 p-4 rounded border border-gray-700 bg-gray-900 shadow-sm text-white hover:bg-gray-800 transition">
           <Image src={coin.image} alt={coin.name} width={32} height={32} />
           <div className="flex-1">
             <div className="font-semibold">{coin.name} <span className="text-xs text-gray-500">({coin.symbol?.toUpperCase()})</span></div>
@@ -65,7 +65,7 @@ export default function Home() {
   return (
     <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
       <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start w-full max-w-2xl">
-        <h1 className="text-2xl font-bold mb-4">Cryptocurrency Search</h1>
+        <h1 className="text-2xl font-bold mb-4 text-white">Cryptocurrency Search</h1>
         <CryptoSearch />
       </main>
       <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">

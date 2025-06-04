@@ -60,7 +60,7 @@ export default function CryptoSearch() {
           value={query}
           onChange={e => setQuery(e.target.value)}
           placeholder="Search for a cryptocurrency..."
-          className="flex-1 px-3 py-2 rounded border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-black dark:text-white"
+          className="flex-1 px-3 py-2 rounded border border-gray-700 bg-gray-900 text-white"
           autoComplete="off"
         />
         <button type="submit" className="px-4 py-2 rounded bg-blue-600 text-white font-semibold hover:bg-blue-700">Search</button>
@@ -73,7 +73,7 @@ export default function CryptoSearch() {
           {coins.map((coin: any) => (
             <li
               key={coin.id}
-              className="flex items-center gap-4 p-4 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-sm cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition"
+              className="flex items-center gap-4 p-4 rounded border border-gray-700 bg-gray-900 shadow-sm text-white hover:bg-gray-800 transition"
               onClick={() => handleCoinClick(coin.id)}
               tabIndex={0}
               role="button"

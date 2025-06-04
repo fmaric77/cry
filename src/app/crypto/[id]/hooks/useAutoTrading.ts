@@ -1,14 +1,25 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useTrading } from './useTrading';
 import { ModelPrediction } from './useModelPrediction';
+import { BinanceKlineRaw, BollingerBandsValue } from '../types';
 
 export interface AutoTradePosition {
   symbol: string;
   buyPrice: number;
   amount: number;
   timestamp: number;
-  targetSellPrice: number; // +1.2% from buy price
+  targetSellPrice: number; // +1% from buy price for bb_lower_red_two_green strategy
   stopLossPrice: number;   // -0.5% from buy price
+  strategy?: string; // Track which strategy was used
+}
+
+export interface AutoTradeStrategy {
+  id: string;
+  name: string;
+  description: string;
+  enabled: boolean;
+  // In a real system, this could be a function or a DSL string
+  logic: string; // For now, store as a string description
 }
 
 export interface AutoTradeSettings {
@@ -17,6 +28,10 @@ export interface AutoTradeSettings {
   profitTarget: number;   // 1.2% = 0.012
   stopLoss: number;       // 0.5% = 0.005
   minConfidence: 'medium' | 'high'; // Minimum confidence for buy signals
+  strategyMode?: 'default' | 'custom';
+  selectedStrategyId?: string;
+  testMode?: boolean; // Add test mode flag
+  fastTesting?: boolean; // Speed up conditions for testing
 }
 
 export interface AutoTradeStats {
@@ -32,6 +47,11 @@ interface UseAutoTradingOptions {
   currentPrice: number;
   prediction: ModelPrediction | null;
   settings: AutoTradeSettings;
+  selectedPeriod: string;
+  indicators: any;
+  binanceCandles: BinanceKlineRaw[];
+  candles?: BinanceKlineRaw[]; // Add candle data for strategy evaluation
+  bollingerBands?: BollingerBandsValue[]; // Add Bollinger Bands data
 }
 
 interface UseAutoTradingReturn {
@@ -40,6 +60,8 @@ interface UseAutoTradingReturn {
   isProcessing: boolean;
   lastAction: string | null;
   tradeLog: string[];
+  strategies: AutoTradeStrategy[];
+  saveStrategy: (strategy: AutoTradeStrategy) => void;
 }
 
 const DEFAULT_SETTINGS: AutoTradeSettings = {
@@ -54,7 +76,12 @@ export function useAutoTrading({
   symbol,
   currentPrice,
   prediction,
-  settings
+  settings,
+  selectedPeriod,
+  indicators,
+  binanceCandles,
+  candles,
+  bollingerBands
 }: UseAutoTradingOptions): UseAutoTradingReturn {
   const { portfolio, buyAsset, sellAsset, getHolding } = useTrading();
   const [currentPosition, setCurrentPosition] = useState<AutoTradePosition | null>(null);
@@ -68,7 +95,23 @@ export function useAutoTrading({
   const [isProcessing, setIsProcessing] = useState(false);
   const [lastAction, setLastAction] = useState<string | null>(null);
   const [tradeLog, setTradeLog] = useState<string[]>([]);
-  
+  const [strategies, setStrategies] = useState<AutoTradeStrategy[]>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('auto-trade-strategies');
+      if (saved) return JSON.parse(saved);
+    }
+    // Default example strategy
+    return [
+      {
+        id: 'default-bb-green',
+        name: 'Bollinger Band + Green Candles',
+        description: 'Buy when price hits lower Bollinger Band, red candle closes, then two green candles close',
+        enabled: true,
+        logic: 'bb_lower_red_two_green'
+      }
+    ];
+  });
+
   const lastPriceRef = useRef<number>(currentPrice);
   const lastPredictionRef = useRef<ModelPrediction | null>(null);
   const wasEnabledRef = useRef<boolean>(settings.enabled);
@@ -275,6 +318,129 @@ export function useAutoTrading({
     }
   }, [isProcessing, sellAsset, symbol, currentPrice, addToLog, stats]);
 
+  // Save strategies to localStorage
+  useEffect(() => {
+    localStorage.setItem('auto-trade-strategies', JSON.stringify(strategies));
+  }, [strategies]);
+
+  // Add a function to add or update a strategy
+  const saveStrategy = useCallback((strategy: AutoTradeStrategy) => {
+    setStrategies(prev => {
+      const idx = prev.findIndex(s => s.id === strategy.id);
+      if (idx >= 0) {
+        const updated = [...prev];
+        updated[idx] = strategy;
+        return updated;
+      }
+      return [...prev, strategy];
+    });
+  }, []);
+
+  // Helper function to check if a candle is green (close > open)
+  const isCandleGreen = useCallback((candle: BinanceKlineRaw): boolean => {
+    return parseFloat(candle[4]) > parseFloat(candle[1]); // close > open
+  }, []);
+
+  // Helper function to check if a candle is red (close < open)
+  const isCandleRed = useCallback((candle: BinanceKlineRaw): boolean => {
+    return parseFloat(candle[4]) < parseFloat(candle[1]); // close < open
+  }, []);
+
+  // Strategy evaluation logic - bb_lower_red_two_green strategy
+  const evaluateCustomStrategy = useCallback((strategy: AutoTradeStrategy): boolean => {
+    if (strategy.logic === 'bb_lower_red_two_green') {
+      // Use binanceCandles data and extract Bollinger Bands from indicators
+      if (!binanceCandles || binanceCandles.length < 3 || !indicators?.bb || indicators.bb.length < 1) {
+        return false;
+      }
+
+      // Get the last 3 candles (most recent first)
+      const lastCandles = binanceCandles.slice(-3);
+      const [thirdLast, secondLast, latest] = lastCandles;
+      
+      // Get the latest Bollinger Band values from indicators
+      const latestBB = indicators.bb[indicators.bb.length - 1];
+      
+      if (!latestBB) return false;
+
+      // Check if we already have a position for this strategy
+      if (currentPosition) return false;
+
+      // Strategy conditions:
+      // 1. Price hit lower Bollinger Band (check if any recent candle touched lower band)
+      const priceHitLowerBand = lastCandles.some(candle => {
+        const low = parseFloat(candle[3]);
+        return low <= latestBB.lower * 1.001; // Allow 0.1% tolerance
+      });
+
+      // 2. Red candle closed (third to last candle should be red)
+      const hasRedCandle = isCandleRed(thirdLast);
+
+      // 3. Two consecutive green candles after the red one
+      const hasTwoGreenCandles = isCandleGreen(secondLast) && isCandleGreen(latest);
+
+      // 4. Make sure we have enough cash
+      const availableCash = portfolio.cash * 0.95;
+      const hasEnoughCash = availableCash >= settings.maxTradeAmount;
+
+      const conditionsMet = priceHitLowerBand && hasRedCandle && hasTwoGreenCandles && hasEnoughCash;
+
+      if (conditionsMet) {
+        addToLog(`BB Strategy Signal: Lower Band Hit=${priceHitLowerBand}, Red Candle=${hasRedCandle}, Two Green=${hasTwoGreenCandles}`);
+        addToLog(`Lower Band: $${latestBB.lower.toFixed(4)}, Current Price: $${currentPrice.toFixed(4)}`);
+      }
+
+      return conditionsMet;
+    }
+    
+    return false;
+  }, [binanceCandles, indicators, currentPosition, portfolio.cash, settings.maxTradeAmount, currentPrice, addToLog]);
+
+  // Execute buy order specifically for custom strategies
+  const executeCustomStrategyBuy = useCallback(async (strategy: AutoTradeStrategy) => {
+    if (isProcessing) return;
+    
+    setIsProcessing(true);
+    
+    try {
+      const maxAmount = settings.maxTradeAmount / currentPrice;
+      const success = buyAsset(symbol, maxAmount, currentPrice);
+      
+      if (success) {
+        // For bb_lower_red_two_green strategy, use 1% profit target instead of default 1.2%
+        const profitTarget = strategy.logic === 'bb_lower_red_two_green' ? 0.01 : settings.profitTarget;
+        const targetSellPrice = currentPrice * (1 + profitTarget);
+        const stopLossPrice = currentPrice * (1 - settings.stopLoss);
+        
+        const position: AutoTradePosition = {
+          symbol,
+          buyPrice: currentPrice,
+          amount: maxAmount,
+          timestamp: Date.now(),
+          targetSellPrice,
+          stopLossPrice,
+          strategy: strategy.logic
+        };
+        
+        setCurrentPosition(position);
+        
+        // Log to memory only
+        addToLog(`STRATEGY BUY EXECUTED: ${strategy.name} - ${maxAmount.toFixed(6)} ${symbol.toUpperCase()} @ $${currentPrice.toFixed(4)}`);
+        addToLog(`Targets Set - Profit: $${targetSellPrice.toFixed(4)} (+${(profitTarget * 100).toFixed(1)}%) | Stop Loss: $${stopLossPrice.toFixed(4)} (-0.5%)`);
+        
+        setLastAction(`Strategy Buy: ${maxAmount.toFixed(6)} ${symbol.toUpperCase()}`);
+      } else {
+        addToLog(`STRATEGY BUY FAILED: Insufficient funds for ${symbol.toUpperCase()}`);
+        setLastAction('Strategy buy failed - insufficient funds');
+      }
+    } catch (error) {
+      addToLog(`STRATEGY BUY ERROR: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      setLastAction('Strategy buy failed - error occurred');
+    } finally {
+      setIsProcessing(false);
+    }
+  }, [isProcessing, settings, currentPrice, buyAsset, symbol, addToLog]);
+
   // Monitor auto trading state changes and save log when stopped
   useEffect(() => {
     // Check if auto trading was just disabled
@@ -317,9 +483,18 @@ export function useAutoTrading({
         executeBuy(prediction);
       }
     }
+
+    // If settings.strategyMode === 'custom', use the selected strategy
+    if (settings.strategyMode === 'custom' && settings.selectedStrategyId) {
+      const strat = strategies.find(s => s.id === settings.selectedStrategyId && s.enabled);
+      if (strat && evaluateCustomStrategy(strat)) {
+        // Execute buy logic for custom strategy
+        executeCustomStrategyBuy(strat);
+      }
+    }
     
     saveState();
-  }, [currentPrice, prediction, settings.enabled, isProcessing, currentPosition, shouldSell, executeSell, shouldBuy, executeBuy, saveState]);
+  }, [currentPrice, prediction, settings.enabled, isProcessing, currentPosition, shouldSell, executeSell, shouldBuy, executeBuy, saveState, strategies, evaluateCustomStrategy, executeCustomStrategyBuy]);
 
   // Save state whenever it changes
   useEffect(() => {
@@ -331,6 +506,8 @@ export function useAutoTrading({
     stats,
     isProcessing,
     lastAction,
-    tradeLog
+    tradeLog,
+    strategies,
+    saveStrategy
   };
 }

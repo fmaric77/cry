@@ -5,12 +5,12 @@ import {
   IndicatorData, 
   IndicatorSettings 
 } from '../types';
-import { calculateAllIndicators } from '../indicators';
+import { calculateAllIndicators, defaultIndicatorSettings } from '../indicators';
 
 interface UseIndicatorsOptions {
   prices: PricePoint[];
   candles: BinanceKlineRaw[];
-  settings: IndicatorSettings;
+  settings?: IndicatorSettings;
 }
 
 interface UseIndicatorsReturn {
@@ -21,9 +21,9 @@ interface UseIndicatorsReturn {
 }
 
 export function useIndicators({ 
-  prices, 
-  candles, 
-  settings 
+  prices = [], 
+  candles = [], 
+  settings = defaultIndicatorSettings 
 }: UseIndicatorsOptions): UseIndicatorsReturn {
   const indicators = useMemo(() => {
     if (prices.length === 0) return {};

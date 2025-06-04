@@ -309,7 +309,7 @@ export const defaultIndicatorSettings: IndicatorSettings = {
   },
   ema: {
     enabled: false,
-    period: 21,
+    period: 20,
     color: '#4ecdc4'
   },
   rsi: {

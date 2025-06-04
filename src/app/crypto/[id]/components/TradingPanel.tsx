@@ -83,15 +83,34 @@ export function TradingPanel({ symbol, currentPrice, coinName }: TradingPanelPro
   const pnl = holding ? currentValue - holding.totalInvested : 0;
   const pnlPercentage = holding && holding.totalInvested > 0 ? (pnl / holding.totalInvested) * 100 : 0;
 
+  // Add testing helper functions
+  const simulateStrategyTest = () => {
+    // Simulate conditions for bb_lower_red_two_green strategy
+    console.log('🧪 Simulating strategy test conditions...');
+    setNotification({ 
+      type: 'success', 
+      message: 'Strategy test simulation triggered - check auto trading panel debug info' 
+    });
+  };
+
   return (
-    <div className="bg-white rounded-lg shadow-lg p-6 border">
+    <div className="bg-black rounded-lg shadow-lg p-6 border border-gray-800 text-white">
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold text-gray-900">
+        <h3 className="text-lg font-semibold text-white">
           Trade {coinName || symbol.toUpperCase()}
         </h3>
-        <div className="text-sm text-gray-600">
-          ${currentPrice.toFixed(4)}
+        <div className="flex items-center space-x-2">
+          <div className="text-sm text-gray-300">
+            ${currentPrice.toFixed(4)}
+          </div>
+          <button
+            onClick={simulateStrategyTest}
+            className="px-2 py-1 bg-purple-600 text-white rounded text-xs hover:bg-purple-700"
+            title="Test Strategy"
+          >
+            🧪 Test
+          </button>
         </div>
       </div>
 
@@ -107,29 +126,27 @@ export function TradingPanel({ symbol, currentPrice, coinName }: TradingPanelPro
       )}
 
       {/* Portfolio Info */}
-      <div className="mb-4 p-3 bg-gray-50 rounded-lg">
+      <div className="mb-4 p-3 bg-gray-900 rounded-lg">
         <div className="grid grid-cols-2 gap-4 text-sm">
           <div>
-            <span className="text-gray-600">Cash:</span>
-            <div className="font-semibold">${portfolio.cash.toFixed(2)}</div>
+            <span className="text-gray-300">Cash:</span>
+            <div className="font-semibold text-white">${portfolio.cash.toFixed(2)}</div>
           </div>
           <div>
-            <span className="text-gray-600">Holdings:</span>
-            <div className="font-semibold">
+            <span className="text-gray-300">Holdings:</span>
+            <div className="font-semibold text-white">
               {holding ? `${holding.amount.toFixed(6)} ${symbol.toUpperCase()}` : '0'}
             </div>
           </div>
           {holding && (
             <>
               <div>
-                <span className="text-gray-600">Avg Price:</span>
-                <div className="font-semibold">${holding.averagePrice.toFixed(4)}</div>
+                <span className="text-gray-300">Avg Price:</span>
+                <div className="font-semibold text-white">${holding.averagePrice.toFixed(4)}</div>
               </div>
               <div>
-                <span className="text-gray-600">P&L:</span>
-                <div className={`font-semibold ${pnl >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                  ${pnl.toFixed(2)} ({pnlPercentage.toFixed(2)}%)
-                </div>
+                <span className="text-gray-300">P&L:</span>
+                <div className={`font-semibold ${pnl >= 0 ? 'text-green-400' : 'text-red-400'}`}>${pnl.toFixed(2)} ({pnlPercentage.toFixed(2)}%)</div>
               </div>
             </>
           )}
@@ -137,13 +154,13 @@ export function TradingPanel({ symbol, currentPrice, coinName }: TradingPanelPro
       </div>
 
       {/* Buy/Sell Tabs */}
-      <div className="flex mb-4 bg-gray-100 rounded-lg p-1">
+      <div className="flex mb-4 bg-gray-800 rounded-lg p-1">
         <button
           onClick={() => setActiveTab('BUY')}
           className={`flex-1 py-2 px-4 rounded-md font-medium transition-colors ${
             activeTab === 'BUY'
-              ? 'bg-green-600 text-white'
-              : 'text-gray-600 hover:text-gray-900'
+              ? 'bg-green-600 text-black'
+              : 'text-gray-300 hover:text-white'
           }`}
         >
           Buy
@@ -152,8 +169,8 @@ export function TradingPanel({ symbol, currentPrice, coinName }: TradingPanelPro
           onClick={() => setActiveTab('SELL')}
           className={`flex-1 py-2 px-4 rounded-md font-medium transition-colors ${
             activeTab === 'SELL'
-              ? 'bg-red-600 text-white'
-              : 'text-gray-600 hover:text-gray-900'
+              ? 'bg-red-600 text-black'
+              : 'text-gray-300 hover:text-white'
           }`}
         >
           Sell
@@ -163,7 +180,7 @@ export function TradingPanel({ symbol, currentPrice, coinName }: TradingPanelPro
       {/* Trading Form */}
       <div className="space-y-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-gray-200 mb-1">
             Amount ({symbol.toUpperCase()})
           </label>
           <div className="relative">
@@ -171,31 +188,31 @@ export function TradingPanel({ symbol, currentPrice, coinName }: TradingPanelPro
               type="number"
               value={amount}
               onChange={(e) => handleAmountChange(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-900 text-white"
               placeholder="0.00000000"
               step="0.00000001"
             />
             <button
               onClick={setMaxAmount}
-              className="absolute right-2 top-1/2 transform -translate-y-1/2 text-xs text-blue-600 hover:text-blue-800"
+              className="absolute right-2 top-1/2 transform -translate-y-1/2 text-xs text-blue-400 hover:text-blue-200"
             >
               Max
             </button>
           </div>
-          <div className="text-xs text-gray-500 mt-1">
+          <div className="text-xs text-gray-400 mt-1">
             Max: {(activeTab === 'BUY' ? maxBuyAmount : maxSellAmount).toFixed(6)} {symbol.toUpperCase()}
           </div>
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-gray-200 mb-1">
             Total (USD)
           </label>
           <input
             type="number"
             value={dollarAmount}
             onChange={(e) => handleDollarAmountChange(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-3 py-2 border border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-900 text-white"
             placeholder="0.00"
             step="0.01"
           />
@@ -206,8 +223,8 @@ export function TradingPanel({ symbol, currentPrice, coinName }: TradingPanelPro
           disabled={!amount || parseFloat(amount) <= 0}
           className={`w-full py-3 px-4 rounded-md font-medium transition-colors ${
             activeTab === 'BUY'
-              ? 'bg-green-600 hover:bg-green-700 text-white disabled:bg-gray-300'
-              : 'bg-red-600 hover:bg-red-700 text-white disabled:bg-gray-300'
+              ? 'bg-green-600 hover:bg-green-700 text-black disabled:bg-gray-700'
+              : 'bg-red-600 hover:bg-red-700 text-black disabled:bg-gray-700'
           }`}
         >
           {activeTab === 'BUY' ? 'Buy' : 'Sell'} {symbol.toUpperCase()}
@@ -216,8 +233,8 @@ export function TradingPanel({ symbol, currentPrice, coinName }: TradingPanelPro
 
       {/* Trade Summary */}
       {amount && parseFloat(amount) > 0 && (
-        <div className="mt-4 p-3 bg-gray-50 rounded-lg">
-          <div className="text-sm text-gray-600 mb-2">Trade Summary:</div>
+        <div className="mt-4 p-3 bg-gray-900 rounded-lg">
+          <div className="text-sm text-gray-300 mb-2">Trade Summary:</div>
           <div className="space-y-1 text-sm">
             <div className="flex justify-between">
               <span>Amount:</span>
